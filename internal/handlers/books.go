@@ -8,6 +8,6 @@ import (
 
 func Books(mux chi.Router) {
 	mux.Get("/books", func(w http.ResponseWriter, r *http.Request) {
-
+		w.Write([]byte("welcome"))
 	})
 }
