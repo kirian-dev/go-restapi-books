@@ -1,5 +1,7 @@
 package server
 
-func (s *Server) setupRoutes() {
+import "restapi-books/handlers"
 
+func (s *Server) setupRoutes() {
+	handlers.Books(s.mux)
 }

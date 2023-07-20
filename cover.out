@@ -1,5 +1,7 @@
 mode: set
-restapi-books/server/routes.go:3.33,5.2 0 0
+restapi-books/handlers/books.go:9.28,10.65 1 1
+restapi-books/handlers/books.go:10.66,12.3 0 1
+restapi-books/server/routes.go:5.32,7.2 1 0
 restapi-books/server/server.go:26.32,42.2 3 0
 restapi-books/server/server.go:44.32,48.91 3 0
 restapi-books/server/server.go:48.91,51.3 1 0
