@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"restapi-books/internal/storage"
 	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	_ "github.com/lib/pq"
 	"go.uber.org/zap"
 )
 
@@ -18,6 +20,7 @@ type Server struct {
 	mux     chi.Router
 	log     *zap.Logger
 	server  *http.Server
+	storage *storage.BooksPostgresStorage
 }
 
 type Options struct {
@@ -26,7 +29,7 @@ type Options struct {
 	Port int
 }
 
-func New(opts Options) *Server {
+func New(opts Options, storage *storage.BooksPostgresStorage) *Server {
 	if opts.Log == nil {
 		opts.Log = zap.NewNop()
 	}
@@ -45,6 +48,7 @@ func New(opts Options) *Server {
 			WriteTimeout:      5 * time.Second,
 			IdleTimeout:       5 * time.Second,
 		},
+		storage: storage,
 	}
 }
 

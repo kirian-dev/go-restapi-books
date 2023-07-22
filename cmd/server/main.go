@@ -8,8 +8,11 @@ import (
 	"strconv"
 	"syscall"
 
+	"restapi-books/internal/storage"
+	"restapi-books/pkg/db"
 	"restapi-books/server"
 
+	_ "github.com/lib/pq"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )
@@ -36,12 +39,21 @@ func start() int {
 
 	host := getStringOrDefault("HOST", "localhost")
 	port := getIntOrDefault("PORT", 8080)
+	db, err := db.CreateDbConnection()
 
+	if err != nil {
+		log.Error("error creating db connection", zap.Error(err))
+		return 1
+	}
+
+	defer db.Close()
+
+	storage := storage.NewBooksPostgresStorage(db)
 	s := server.New(server.Options{
 		Host: host,
 		Port: port,
 		Log:  log,
-	})
+	}, storage)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()

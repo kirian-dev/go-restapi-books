@@ -5,14 +5,21 @@ import (
 	"testing"
 	"time"
 
+	"restapi-books/internal/storage"
+	"restapi-books/pkg/db"
 	"restapi-books/server"
 )
 
 func CreateServer() func() {
+	db, err := db.CreateDbConnection()
+	if err != nil {
+		return nil
+	}
+	storage := storage.NewBooksPostgresStorage(db)
 	s := server.New(server.Options{
 		Host: "localhost",
 		Port: 8081,
-	})
+	}, storage)
 
 	go func() {
 		if err := s.Start(); err != nil {
