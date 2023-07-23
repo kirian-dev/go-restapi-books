@@ -26,7 +26,7 @@ func TestMain(m *testing.M) {
 		panic("failed to connect to the database: " + err.Error())
 	}
 
-	_, err = db.Exec("CREATE TABLE books (id SERIAL PRIMARY KEY, title TEXT, published_date DATE)")
+	_, err = db.Exec("CREATE TABLE books (id SERIAL PRIMARY KEY, title TEXT, published_at DATE)")
 	if err != nil {
 		panic("failed to create table: " + err.Error())
 	}

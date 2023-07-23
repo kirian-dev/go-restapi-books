@@ -2,6 +2,8 @@ package storage
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"restapi-books/internal/model"
 	"time"
@@ -16,7 +18,7 @@ type BooksPostgresStorage struct {
 type dbBook struct {
 	ID          int64     `db:"id"`
 	Title       string    `db:"title"`
-	PublishedAt time.Time `db:"published_date"`
+	PublishedAt time.Time `db:"published_at"`
 }
 
 func NewBooksPostgresStorage(db *sqlx.DB) *BooksPostgresStorage {
@@ -60,11 +62,25 @@ func (s *BooksPostgresStorage) BookById(ctx context.Context, id int) (*model.Boo
 
 	var book dbBook
 
-	if err := conn.SelectContext(ctx, &book, `SELECT * FROM book WHERE id = $1`, id); err != nil {
+	row := conn.QueryRowxContext(ctx, `SELECT * FROM books WHERE id = $1`, id)
+	if err := row.Err(); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("book not found")
+		}
 		return nil, fmt.Errorf("error fetching book from db: %w", err)
 	}
 
-	return (*model.Book)(&book), nil
+	if err := row.StructScan(&book); err != nil {
+		return nil, fmt.Errorf("error scanning book from row: %w", err)
+	}
+
+	modelBook := model.Book{
+		ID:          book.ID,
+		Title:       book.Title,
+		PublishedAt: book.PublishedAt,
+	}
+
+	return &modelBook, nil
 }
 
 func (s *BooksPostgresStorage) Add(ctx context.Context, book model.Book) (*int64, error) {
@@ -90,27 +106,26 @@ func (s *BooksPostgresStorage) Add(ctx context.Context, book model.Book) (*int64
 
 }
 
-func (s *BooksPostgresStorage) Update(ctx context.Context, book model.Book, id int64) (*model.Book, error) {
+func (s *BooksPostgresStorage) Update(ctx context.Context, book model.Book, id int) (*model.Book, error) {
 	conn, err := s.db.Connx(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("error updating book from db: %w", err)
+		return nil, fmt.Errorf("error connect to db: %w", err)
 	}
 
 	defer conn.Close()
 
 	var dbBook dbBook
 
-	if err := conn.SelectContext(ctx, &dbBook, `SELECT * FROM books WHERE id = $1`, id); err != nil {
+	if err := conn.QueryRowxContext(ctx, `SELECT * FROM books WHERE id = $1`, id).StructScan(&dbBook); err != nil {
 		return nil, fmt.Errorf("error fetching book from db: %w", err)
 	}
 
 	dbBook.Title = book.Title
 	dbBook.PublishedAt = book.PublishedAt
 
-	row := conn.QueryRowxContext(ctx, `UPDATE books SET title = $1, PUBLISHED_DATE = $2 WHERE id = $3`, dbBook.Title, dbBook.PublishedAt, id)
-
-	if err := row.Err(); err != nil {
-		return nil, fmt.Errorf("error updating book from db: %w", err)
+	_, err = conn.ExecContext(ctx, `UPDATE books SET title = $1, published_at = $2 WHERE id = $3`, dbBook.Title, dbBook.PublishedAt, id)
+	if err != nil {
+		return nil, fmt.Errorf("error updating book in db: %w", err)
 	}
 
 	return &model.Book{
@@ -118,4 +133,19 @@ func (s *BooksPostgresStorage) Update(ctx context.Context, book model.Book, id i
 		Title:       dbBook.Title,
 		PublishedAt: dbBook.PublishedAt,
 	}, nil
+}
+
+func (s *BooksPostgresStorage) Delete(ctx context.Context, id int) error {
+	conn, err := s.db.Connx(ctx)
+	if err != nil {
+		return fmt.Errorf("error creating db connection")
+	}
+
+	defer conn.Close()
+
+	_, err = conn.ExecContext(ctx, `DELETE FROM books WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("error executing delete query: %w", err)
+	}
+	return nil
 }
